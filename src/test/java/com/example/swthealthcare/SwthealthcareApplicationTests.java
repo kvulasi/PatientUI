@@ -1,13 +1,14 @@
 package com.example.swthealthcare;
 
-import java.io.IOException;
+//import java.io.IOException;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+
+//@SpringBootTest
 class SwthealthcareApplicationTests {
-
+	//private final SWTWorkbenchBot bot = new SWTWorkbenchBot();
+	
 	@Test
 	void contextLoads() {
 	}

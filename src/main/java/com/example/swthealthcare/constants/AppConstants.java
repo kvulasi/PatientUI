@@ -33,4 +33,7 @@ public class AppConstants {
 	public static String VIEW_BUTTON		= "View";
 	
 	public static String CREATE				= "create";
+	public static String SUBMIT				= "submit";
+	public static String SEARCH				= "search";
+	public static String PATIENT_URI		= "http://localhost:8080/patients";
 }

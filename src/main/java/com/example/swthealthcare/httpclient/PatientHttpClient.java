@@ -17,10 +17,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 public class PatientHttpClient {
 	/**
-	 * Rest API's application URL variable.
-	 */
-	String patientURI = "http://localhost:8080/patients";
-	/**
 	 * HttpRequest variable..
 	 */
 	HttpRequest request = null;
@@ -39,7 +35,7 @@ public class PatientHttpClient {
 	 * @throws {@link InterruptedException}
 	 */
 	public List<Patient> getAllPatients() throws IOException, InterruptedException {
-		request = HttpRequest.newBuilder().uri(URI.create(patientURI + "/")).GET().build();
+		request = HttpRequest.newBuilder().uri(URI.create(AppConstants.PATIENT_URI + "/")).GET().build();
 		response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
 		if (!response.body().isEmpty()) {
 			return new ObjectMapper().readValue(response.body(), new TypeReference<List<Patient>>() {
@@ -56,7 +52,7 @@ public class PatientHttpClient {
 	 * @throws {@link InterruptedException}
 	 */
 	public Patient getPatientById(Long patientId) throws IOException, InterruptedException {
-		request = HttpRequest.newBuilder().uri(URI.create(patientURI + "/" + patientId)).GET().build();
+		request = HttpRequest.newBuilder().uri(URI.create(AppConstants.PATIENT_URI + "/" + patientId)).GET().build();
 		response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
 		return new ObjectMapper().readValue(response.body(), Patient.class);
 	}
@@ -68,7 +64,7 @@ public class PatientHttpClient {
 	 * @throws {@link InterruptedException}
 	 */
 	public List<Patient> getPatientsBySearch(String searchKeyword) throws IOException, InterruptedException {
-		request = HttpRequest.newBuilder().uri(URI.create(patientURI + "?search=" + searchKeyword)).GET().build();
+		request = HttpRequest.newBuilder().uri(URI.create(AppConstants.PATIENT_URI + "?search=" + searchKeyword)).GET().build();
 		response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
 		return new ObjectMapper().readValue(response.body(), new TypeReference<List<Patient>>() {
 		});
@@ -81,7 +77,7 @@ public class PatientHttpClient {
 	 * @throws {@link InterruptedException}
 	 */
 	public Patient addPatient(Patient patient) throws IOException, InterruptedException {
-		request = HttpRequest.newBuilder().uri(URI.create(patientURI + "/" + AppConstants.CREATE))
+		request = HttpRequest.newBuilder().uri(URI.create(AppConstants.PATIENT_URI + "/" + AppConstants.CREATE))
 				.POST(HttpRequest.BodyPublishers.ofString(new ObjectMapper().writeValueAsString(patient)))
 				.setHeader("Content-Type", "application/json").build();
 
@@ -97,7 +93,7 @@ public class PatientHttpClient {
 	 * @throws {@link InterruptedException}
 	 */
 	public int updatePatient(Long patientId, Patient patient) throws IOException, InterruptedException {
-		request = HttpRequest.newBuilder().uri(URI.create(patientURI + "/" + patientId))
+		request = HttpRequest.newBuilder().uri(URI.create(AppConstants.PATIENT_URI + "/" + patientId))
 				.PUT(HttpRequest.BodyPublishers.ofString(new ObjectMapper().writeValueAsString(patient)))
 				.setHeader("Content-Type", "application/json").build();
 
@@ -112,7 +108,7 @@ public class PatientHttpClient {
 	 * @throws {@link InterruptedException}
 	 */
 	public int deletePatientById(Long patientId) throws IOException, InterruptedException {
-		request = HttpRequest.newBuilder().uri(URI.create(patientURI + "/" + patientId)).DELETE().build();
+		request = HttpRequest.newBuilder().uri(URI.create(AppConstants.PATIENT_URI + "/" + patientId)).DELETE().build();
 		response = HttpClient.newHttpClient().send(request, HttpResponse.BodyHandlers.ofString());
 		return response.statusCode();
 	}

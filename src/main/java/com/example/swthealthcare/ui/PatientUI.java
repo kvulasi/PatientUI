@@ -1,4 +1,4 @@
-package com.example.swthealthcare.patientui;
+package com.example.swthealthcare.ui;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -19,7 +19,6 @@ import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 
-import com.example.swthealthcare.SWTHealthCareApplication;
 import com.example.swthealthcare.constants.AppConstants;
 import com.example.swthealthcare.httpclient.PatientHttpClient;
 import com.example.swthealthcare.models.Address;
@@ -39,12 +38,70 @@ public class PatientUI {
 
 	int statusCode;
 	Patient patientResponse;
+	TableRowUI tableRowUI = new TableRowUI();
+
+	/**
+	 * Method defined to fill the UI with patient data.
+	 * 
+	 * @param table      {@link Table}
+	 * @param display    {@link Display}
+	 * @param viewName   {@link String}
+	 * @param buttonType {@link String}
+	 * @param PatientId  {@link Long}
+	 * @throws {@link IOException}
+	 * @throws {@link InterruptedException}
+	 */
+	public void patientViewFill(Table table, Display display, String viewName, String buttonType, Long PatientId)
+			throws IOException, InterruptedException {
+		patientView(table, display, buttonType, viewName);
+
+		if (!AppConstants.CREATE_BUTTON.equalsIgnoreCase(buttonType)) {
+			Patient patientById = patientClient.getPatientById(PatientId);
+			if (AppConstants.UPDATE_BUTTON.equalsIgnoreCase(buttonType)) {
+				patientIdText.setText(String.valueOf(patientById.getId()));
+			}
+			firstNameText.setText(patientById.getFirstName());
+			lastNameText.setText(patientById.getLastName());
+			genderCombo.setText(patientById.getGender());
+			dobText.setText(patientById.getDateOfBirth());
+			List<Address> addresses = patientById.getAddresses();
+
+			for (int i = 0; i < addresses.size(); i++) {
+				Address address = addresses.get(i);
+				if (AppConstants.PERMANENT_ADDRESS.equals(address.getAddressType())) {
+					if (AppConstants.UPDATE_BUTTON.equalsIgnoreCase(buttonType)) {
+						permanentAddressIdText.setText(String.valueOf(address.getId()));
+					}
+					permanentAddressText.setText(address.getAddress());
+					permanentAddressCityText.setText(address.getCity());
+					permanentAddressStateText.setText(address.getState());
+					permanentAddressCountryText.setText(address.getCountry());
+					permanentAddressPincodeText.setText(address.getPincode());
+				} else if (AppConstants.CURRENT_ADDRESS.equals(address.getAddressType())) {
+					if (AppConstants.UPDATE_BUTTON.equalsIgnoreCase(buttonType)) {
+						currentAddressIdText.setText(String.valueOf(address.getId()));
+					}
+					currentAddressText.setText(address.getAddress());
+					currentAddressCityText.setText(address.getCity());
+					currentAddressStateText.setText(address.getState());
+					currentAddressCountryText.setText(address.getCountry());
+					currentAddressPincodeText.setText(address.getPincode());
+				}
+			}
+			phoneNumberText.setText(patientById.getPhoneNumber());
+			secondaryPhoneNumberText.setText(
+					patientById.getSecondaryPhoneNumber() != null ? patientById.getSecondaryPhoneNumber() : "");
+			landLineNumberText.setText(patientById.getLandLineNumber() != null ? patientById.getLandLineNumber() : "");
+		}
+	}
+
 	/**
 	 * Method defined to show the patient data in UI.
-	 * @param table {@link Table}
-	 * @param display {@link Display}
+	 * 
+	 * @param table      {@link Table}
+	 * @param display    {@link Display}
 	 * @param buttonType {@link String}
-	 * @param viewName {@link String}
+	 * @param viewName   {@link String}
 	 */
 	private void patientView(Table table, Display display, String buttonType, String viewName) {
 		Display patientDisplay = display;
@@ -57,7 +114,70 @@ public class PatientUI {
 			patientIdLabel.setText("PatientId");
 			patientIdText = new Text(patientShell, SWT.BORDER);
 		}
+		basicDetails(patientShell);
+		permanentAddressGroup = new Group(patientShell, SWT.NONE);
+		permanentAddressGroup.setText(AppConstants.PERMANENT_ADDRESS);
+		permanentAddressGroup.setLayout(new GridLayout(2, true));
+		permanentAddressGroup.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
 
+		if (AppConstants.UPDATE_BUTTON.equalsIgnoreCase(buttonType)) {
+			Label permanentAddressIdLabel = new Label(permanentAddressGroup, SWT.NONE);
+			permanentAddressIdLabel.setText(AppConstants.ADDRESS_ID);
+			permanentAddressIdText = new Text(permanentAddressGroup, SWT.BORDER);
+		}
+		permanentAddress(patientShell);
+		currentAddressGroup = new Group(patientShell, SWT.NONE);
+		currentAddressGroup.setText(AppConstants.CURRENT_ADDRESS);
+
+		currentAddressGroup.setLayout(new GridLayout(2, true));
+		currentAddressGroup.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
+
+		if (AppConstants.UPDATE_BUTTON.equalsIgnoreCase(buttonType)) {
+			Label currentAddressIdLabel = new Label(currentAddressGroup, SWT.NONE);
+			currentAddressIdLabel.setText(AppConstants.ADDRESS_ID);
+			currentAddressIdText = new Text(currentAddressGroup, SWT.BORDER);
+		}
+		currentAddress(patientShell);
+		contactDetails(patientShell);
+		fieldsEditable(buttonType);
+
+		if (AppConstants.UPDATE_BUTTON.equalsIgnoreCase(buttonType)
+				|| AppConstants.CREATE.equalsIgnoreCase(buttonType)) {
+			Button ok = new Button(patientShell, SWT.PUSH);
+			ok.setText(AppConstants.SUBMIT);
+			ok.addSelectionListener(widgetSelectedAdapter(e -> {
+				try {
+					if (AppConstants.UPDATE_BUTTON.equalsIgnoreCase(buttonType)) {
+						statusCode = patientClient.updatePatient(getPatient(AppConstants.UPDATE_BUTTON).getId(),
+								getPatient(buttonType));
+						if (statusCode == 200) {
+							tableRowUI.tableItems(table.getSelection()[0], getPatient(AppConstants.UPDATE_BUTTON));
+							patientShell.close();
+						}
+					} else {
+						patientResponse = patientClient.addPatient(getPatient(AppConstants.CREATE_BUTTON));
+						if (patientResponse != null) {
+							TableItem item = new TableItem(table, SWT.NONE, patientClient.getAllPatients().size() - 1);
+							tableRowUI.tableItems(item, patientResponse);
+							patientShell.close();
+						}
+					}
+				} catch (IOException | InterruptedException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}));
+		}
+		patientShell.pack();
+		patientShell.open();
+	}
+
+	/**
+	 * Method defined to show firstname, lastname, gender and dateofbirth details.
+	 * 
+	 * @param patientShell {@link Shell}
+	 */
+	private void basicDetails(Shell patientShell) {
 		Label firstNameLabel = new Label(patientShell, SWT.NONE);
 		firstNameLabel.setText(AppConstants.FIRST_NAME);
 		firstNameText = new Text(patientShell, SWT.BORDER);
@@ -75,18 +195,14 @@ public class PatientUI {
 		dobLabel.setText(AppConstants.DATE_OF_BIRTH);
 		dobText = new Text(patientShell, SWT.BORDER);
 		dobText.setText("yyyy-MM-dd");
+	}
 
-		permanentAddressGroup = new Group(patientShell, SWT.NONE);
-		permanentAddressGroup.setText(AppConstants.PERMANENT_ADDRESS);
-		permanentAddressGroup.setLayout(new GridLayout(2, true));
-		permanentAddressGroup.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
-
-		if (AppConstants.UPDATE_BUTTON.equalsIgnoreCase(buttonType)) {
-			Label permanentAddressIdLabel = new Label(permanentAddressGroup, SWT.NONE);
-			permanentAddressIdLabel.setText(AppConstants.ADDRESS_ID);
-			permanentAddressIdText = new Text(permanentAddressGroup, SWT.BORDER);
-		}
-
+	/**
+	 * Method defined to show permanent address details.
+	 * 
+	 * @param patientShell {@link Shell}
+	 */
+	private void permanentAddress(Shell patientShell) {
 		Label permanentAddressLabel = new Label(permanentAddressGroup, SWT.NONE);
 		permanentAddressLabel.setText(AppConstants.ADDRESS);
 		permanentAddressText = new Text(permanentAddressGroup, SWT.BORDER);
@@ -106,19 +222,14 @@ public class PatientUI {
 		Label permanentAddressPincodeLabel = new Label(permanentAddressGroup, SWT.NONE);
 		permanentAddressPincodeLabel.setText(AppConstants.PINCODE);
 		permanentAddressPincodeText = new Text(permanentAddressGroup, SWT.BORDER);
+	}
 
-		currentAddressGroup = new Group(patientShell, SWT.NONE);
-		currentAddressGroup.setText(AppConstants.CURRENT_ADDRESS);
-
-		currentAddressGroup.setLayout(new GridLayout(2, true));
-		currentAddressGroup.setLayoutData(new GridData(SWT.FILL, SWT.FILL, true, true, 1, 1));
-
-		if (AppConstants.UPDATE_BUTTON.equalsIgnoreCase(buttonType)) {
-			Label currentAddressIdLabel = new Label(currentAddressGroup, SWT.NONE);
-			currentAddressIdLabel.setText(AppConstants.ADDRESS_ID);
-			currentAddressIdText = new Text(currentAddressGroup, SWT.BORDER);
-		}
-
+	/**
+	 * Method defined to show current address details.
+	 * 
+	 * @param patientShell {@link Shell}
+	 */
+	private void currentAddress(Shell patientShell) {
 		Label currentAddressLabel = new Label(currentAddressGroup, SWT.NONE);
 		currentAddressLabel.setText(AppConstants.ADDRESS);
 		currentAddressText = new Text(currentAddressGroup, SWT.BORDER);
@@ -138,7 +249,14 @@ public class PatientUI {
 		Label currentAddressPincodeLabel = new Label(currentAddressGroup, SWT.NONE);
 		currentAddressPincodeLabel.setText(AppConstants.PINCODE);
 		currentAddressPincodeText = new Text(currentAddressGroup, SWT.BORDER);
+	}
 
+	/**
+	 * Method defined to show contact details.
+	 * 
+	 * @param patientShell {@link Shell}
+	 */
+	private void contactDetails(Shell patientShell) {
 		Label phoneNumberLabel = new Label(patientShell, SWT.NONE);
 		phoneNumberLabel.setText(AppConstants.PHONE_NUMBER);
 		phoneNumberText = new Text(patientShell, SWT.BORDER);
@@ -150,7 +268,13 @@ public class PatientUI {
 		Label landLineNumberLabel = new Label(patientShell, SWT.NONE);
 		landLineNumberLabel.setText(AppConstants.LANDLINE_NUMBER);
 		landLineNumberText = new Text(patientShell, SWT.BORDER);
-
+	}
+	/**
+	 * Method defined to make text fields non-editable.
+	 * 
+	 * @param buttonType {@link String}
+	 */
+	private void fieldsEditable(String buttonType) {
 		if (AppConstants.VIEW_BUTTON.equalsIgnoreCase(buttonType)) {
 			firstNameText.setEditable(false);
 			lastNameText.setEditable(false);
@@ -170,46 +294,15 @@ public class PatientUI {
 			phoneNumberText.setEditable(false);
 			secondaryPhoneNumberText.setEditable(false);
 			landLineNumberText.setEditable(false);
-		} else if (AppConstants.UPDATE_BUTTON.equalsIgnoreCase(buttonType)
-				|| AppConstants.CREATE.equalsIgnoreCase(buttonType)) {
-			Button ok = new Button(patientShell, SWT.PUSH);
-			ok.setText("submit");
-			if (AppConstants.UPDATE_BUTTON.equalsIgnoreCase(buttonType)) {
-				patientIdText.setEditable(false);
-				permanentAddressIdText.setEditable(false);
-				currentAddressIdText.setEditable(false);
-			}
-			ok.addSelectionListener(widgetSelectedAdapter(e -> {
-				try {
-					if (AppConstants.UPDATE_BUTTON.equalsIgnoreCase(buttonType)) {
-						statusCode = patientClient.updatePatient(getPatient(AppConstants.UPDATE_BUTTON).getId(),
-								getPatient(buttonType));
-						if (statusCode == 200) {
-							List<Patient> pl = patientClient.getAllPatients();
-							for (int i = 0; i < pl.size(); i++) {
-								SWTHealthCareApplication.tableItems(table.getItems()[i], pl.get(i));
-							}
-							patientShell.close();
-						}
-					} else {
-						patientResponse = patientClient.addPatient(getPatient(AppConstants.CREATE_BUTTON));
-						if (patientResponse != null) {
-							TableItem item = new TableItem(table, SWT.NONE, patientClient.getAllPatients().size() - 1);
-							SWTHealthCareApplication.tableItems(item, patientResponse);
-							patientShell.close();
-						}
-					}
-				} catch (IOException | InterruptedException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-			}));
+		} else if (AppConstants.UPDATE_BUTTON.equalsIgnoreCase(buttonType)) {
+			patientIdText.setEditable(false);
+			permanentAddressIdText.setEditable(false);
+			currentAddressIdText.setEditable(false);
 		}
-		patientShell.pack();
-		patientShell.open();
 	}
 	/**
 	 * Method defined to get patient data from UI.
+	 * 
 	 * @param buttonType {@link String}
 	 * @return {@link Patient}
 	 */
@@ -255,63 +348,9 @@ public class PatientUI {
 		patient.setAddresses(addresses);
 
 		patient.setPhoneNumber(phoneNumberText.getText());
-		patient.setSecondaryPhoneNumber(secondaryPhoneNumberText.getText() != null ? secondaryPhoneNumberText.getText() : null);
+		patient.setSecondaryPhoneNumber(
+				secondaryPhoneNumberText.getText() != null ? secondaryPhoneNumberText.getText() : null);
 		patient.setLandLineNumber(landLineNumberText.getText() != null ? landLineNumberText.getText() : null);
 		return patient;
-	}
-	/**
-	 * Method defined to fill the UI with patient data.
-	 * @param table {@link Table}
-	 * @param display {@link Display}
-	 * @param viewName {@link String}
-	 * @param buttonType {@link String}
-	 * @param PatientId {@link Long}
-	 * @throws {@link IOException}
-	 * @throws {@link InterruptedException}
-	 */
-	public void patientViewFill(Table table, Display display, String viewName, String buttonType, Long PatientId)
-			throws IOException, InterruptedException {
-		patientView(table, display, buttonType, viewName);
-
-		if (!AppConstants.CREATE_BUTTON.equalsIgnoreCase(buttonType)) {
-			Patient patientById = patientClient.getPatientById(PatientId);
-			if (AppConstants.UPDATE_BUTTON.equalsIgnoreCase(buttonType)) {
-				patientIdText.setText(String.valueOf(patientById.getId()));
-			}
-			firstNameText.setText(patientById.getFirstName());
-			lastNameText.setText(patientById.getLastName());
-			genderCombo.setText(patientById.getGender());
-			dobText.setText(patientById.getDateOfBirth());
-			List<Address> addresses = patientById.getAddresses();
-
-			for (int i = 0; i < addresses.size(); i++) {
-				Address address = addresses.get(i);
-				if (AppConstants.PERMANENT_ADDRESS.equals(address.getAddressType())) {
-					if (AppConstants.UPDATE_BUTTON.equalsIgnoreCase(buttonType)) {
-						permanentAddressIdText.setText(String.valueOf(address.getId()));
-					}
-					
-					permanentAddressText.setText(address.getAddress());
-					permanentAddressCityText.setText(address.getCity());
-					permanentAddressStateText.setText(address.getState());
-					permanentAddressCountryText.setText(address.getCountry());
-					permanentAddressPincodeText.setText(address.getPincode());
-				} else if (AppConstants.CURRENT_ADDRESS.equals(address.getAddressType())) {
-					if (AppConstants.UPDATE_BUTTON.equalsIgnoreCase(buttonType)) {
-						currentAddressIdText.setText(String.valueOf(address.getId()));
-					}
-					currentAddressText.setText(address.getAddress());
-					currentAddressCityText.setText(address.getCity());
-					currentAddressStateText.setText(address.getState());
-					currentAddressCountryText.setText(address.getCountry());
-					currentAddressPincodeText.setText(address.getPincode());
-				}
-			}
-			phoneNumberText.setText(patientById.getPhoneNumber());
-			secondaryPhoneNumberText.setText(
-					patientById.getSecondaryPhoneNumber() != null ? patientById.getSecondaryPhoneNumber() : "");
-			landLineNumberText.setText(patientById.getLandLineNumber() != null ? patientById.getLandLineNumber() : "");
-		}
-
 	}
 }
